@@ -4,7 +4,31 @@ use super::{
 };
 
 impl FigApp {
+    pub fn account_intent(&mut self, intent: crate::AccountIntent) -> bool {
+        if !self.services.account_window() {
+            return false;
+        }
+        if let Err(error) = self.services.account_intent(intent) {
+            self.show_error(error);
+        }
+        true
+    }
+
+    /// Unfinished UI input that has no committed representation in the native document yet.
+    pub fn account_ui_busy(&self) -> bool {
+        self.pending_dialog.is_some()
+            || !self.ui.pending_opens.is_empty()
+            || self.ui.rename.is_some()
+            || self.ui.rename_label.is_some()
+            || self.ui.rename_page.is_some()
+            || self.ui.batch_rename.is_some()
+            || self.ui.comments.draft.is_some()
+    }
+
     pub fn save_as_dialog(&mut self) {
+        if self.account_intent(crate::AccountIntent::Save { save_as: true }) {
+            return;
+        }
         if self.services.downloads() {
             self.save_download(None);
             return;
@@ -50,6 +74,9 @@ impl FigApp {
     }
 
     pub fn save(&mut self) {
+        if self.account_intent(crate::AccountIntent::Save { save_as: false }) {
+            return;
+        }
         // A branch tab saves its main file.
         let tab = figcraft_engine::branches::file_tab(&self.session);
         // A path ending in .fig is never saved over silently: a .fig destination is an export copy.
@@ -72,6 +99,9 @@ impl FigApp {
     }
 
     pub fn open_dialog(&mut self) {
+        if self.account_intent(crate::AccountIntent::Open) {
+            return;
+        }
         // Opening needs no file in front: it goes ahead even if that file closed meanwhile.
         self.pick_file(i18n::tr("Open"), OPEN_EXTENSIONS, false, |app, file| {
             if app.run_user("file.open", file).is_some() {

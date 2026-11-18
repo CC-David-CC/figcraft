@@ -390,6 +390,9 @@ pub fn on_close_request(app: &mut FigApp, ctx: &Context) {
 
 /// The custom title bar's Close button uses the same unsaved-file check as a system close event.
 pub(crate) fn request_close(app: &mut FigApp, ctx: &Context) {
+    if app.account_intent(crate::AccountIntent::Close) {
+        return;
+    }
     if !app.unsaved().is_empty() {
         app.ui.confirm_close = true;
         ctx.request_repaint();
@@ -502,6 +505,9 @@ pub enum TabClose {
 /// changes (a branch tab's edits are in its main file already), else after the unsaved-changes
 /// question ([`confirm_close_tab`]).
 pub(crate) fn ask_close_tab(app: &mut FigApp, i: usize) {
+    if app.session.docs.get(i).is_some_and(|tab| tab.branch_of.is_none()) && app.account_intent(crate::AccountIntent::Close) {
+        return;
+    }
     let Some(d) = app.session.docs.get(i) else { return };
     if d.is_dirty() && d.branch_of.is_none() {
         app.ui.find = None;

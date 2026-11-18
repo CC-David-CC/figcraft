@@ -2,8 +2,22 @@ use super::{Arc, FigApp, Future, PathBuf, Pin, Session, Value, Wake, i18n, json}
 
 pub const MAX_CLIPBOARD_PNG_BYTES: usize = 256 * 1024 * 1024;
 
+/// Choices an account host handles for the native editor's File commands.
+pub enum AccountIntent {
+    Save { save_as: bool },
+    New(Value),
+    Open,
+    Close,
+}
+
 /// Platform services the app crate provides (file dialogs, clipboard, URLs).
 pub trait Services {
+    fn account_window(&self) -> bool {
+        false
+    }
+    fn account_intent(&mut self, _intent: AccountIntent) -> Result<(), String> {
+        Err("FigCraft has no account window.".into())
+    }
     fn pick_open(&mut self, _title: &str, _exts: &[&str]) -> DialogFuture {
         Box::pin(std::future::ready(None))
     }

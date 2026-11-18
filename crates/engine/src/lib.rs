@@ -9,6 +9,7 @@
 // Tests make and inspect files directly; shipped code goes through `file_access` (clippy.toml).
 #![cfg_attr(test, allow(clippy::disallowed_methods))]
 
+pub mod account_project;
 mod assets;
 mod automation;
 mod boards;

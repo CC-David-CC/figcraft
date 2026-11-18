@@ -13,6 +13,43 @@ impl FigApp {
 
     /// Run a command, surfacing errors as a toast. Returns the result.
     pub fn run(&mut self, id: &str, params: Value) -> Option<Value> {
+        if self.services.account_window() {
+            use crate::AccountIntent;
+            match id {
+                "file.new" | "file.newBoard" => {
+                    let kind = if id == "file.newBoard" { "board" } else { "design" };
+                    self.account_intent(AccountIntent::New(json!({"kind": kind, "name": params.get("name")})));
+                    return None;
+                }
+                "file.newFromTemplate" => {
+                    self.account_intent(AccountIntent::New(
+                        json!({"kind": "template", "name": params.get("name"), "template": params.get("template")}),
+                    ));
+                    return None;
+                }
+                "file.open" | "file.openRecent" if params.get("data").is_none() && params.get("path").is_none() => {
+                    self.account_intent(AccountIntent::Open);
+                    return None;
+                }
+                "file.close" => {
+                    let target =
+                        params.get("index").and_then(Value::as_u64).and_then(|index| usize::try_from(index).ok()).unwrap_or(self.session.active);
+                    if self.session.docs.get(target).is_some_and(|tab| tab.branch_of.is_none()) {
+                        self.account_intent(AccountIntent::Close);
+                        return None;
+                    }
+                }
+                "file.save" | "file.saveAs" => {
+                    self.account_intent(AccountIntent::Save { save_as: id == "file.saveAs" });
+                    return None;
+                }
+                "file.open" | "file.openRecent" | "file.recover" | "file.revert" | "file.duplicate" | "file.markSaved" => {
+                    self.show_error("Use the WebOS account commands to manage this FigCraft project.".into());
+                    return None;
+                }
+                _ => {}
+            }
+        }
         let layers_generation = self.session.clipboard.layers_generation;
         let r = self.session.execute(id, &params);
         self.clear_comment_draft_after_tool_set(id, r.is_ok());
